@@ -38,7 +38,7 @@
 
 ### 系統架構圖
 
-![系統架構圖](https://github.com/EricLee1114/bert-recommender/images/framework.png)
+![系統架構圖](https://github.com/EricLee1114/bert-recommender/images/framework)
 
 ### 主要組件
 
