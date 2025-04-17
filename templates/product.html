@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ product.商品名稱 }} - BERT推薦系統</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .recommendation-card {
+            transition: transform 0.2s;
+        }
+        .recommendation-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .tag-badge {
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+        .similarity-indicator {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            color: white;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        .similarity-high { background-color: #28a745; }
+        .similarity-medium-high { background-color: #17a2b8; }
+        .similarity-medium { background-color: #ffc107; }
+        .similarity-low { background-color: #fd7e14; }
+        
+        /* 新增閃爍效果 */
+        .realtime-highlight {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        /* 計算中的遮罩層 */
+        #loadingOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .loading-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 80%;
+        }
+        
+        .spinner-border {
+            width: 4rem;
+            height: 4rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- 載入中遮罩 -->
+    <div id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner-border text-primary mb-3" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <h4 id="loadingMessage">正在為您計算推薦商品...</h4>
+            <div class="progress mt-3" style="height: 25px;">
+                <div id="loadingProgress" class="progress-bar progress-bar-striped progress-bar-animated" 
+                     role="progressbar" style="width: 0%" 
+                     aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+            </div>
+            <p class="text-muted mt-2">
+                <small>使用設備: {{ device }}</small>
+            </p>
+        </div>
+    </div>
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">BERT推薦系統</a>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">商品列表</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-8">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/">首頁</a></li>
+                        <li class="breadcrumb-item active">商品詳情</li>
+                    </ol>
+                </nav>
+                
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h2 class="card-title">{{ product.商品名稱 }}</h2>
+                        <h5 class="card-subtitle mb-3 text-muted">{{ product.屬性 }}</h5>
+                        
+                        <div class="mb-4">
+                            <h6>標籤:</h6>
+                            {% for tag in product.標籤.split(',') %}
+                                {% if tag %}
+                                <span class="badge bg-secondary tag-badge">{{ tag }}</span>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4" id="calculationCard">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-lightning-fill"></i> 即時推薦計算
+                            <small id="calculation-badge" class="badge bg-warning text-dark ms-2">計算中...</small>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="card mt-0 mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">BERT推薦系統處理流程</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3 text-center mb-3">
+                                        <div class="p-3 rounded border">
+                                            <i class="bi bi-cpu fs-3 mb-2 text-primary"></i>
+                                            <h6>輸入處理</h6>
+                                            <p class="small mb-0">商品特徵文本標記化</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 text-center mb-3">
+                                        <div class="p-3 rounded border">
+                                            <i class="bi bi-braces fs-3 mb-2 text-info"></i>
+                                            <h6>BERT向量化</h6>
+                                            <p class="small mb-0">768維語義特徵提取</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 text-center mb-3">
+                                        <div class="p-3 rounded border">
+                                            <i class="bi bi-arrow-left-right fs-3 mb-2 text-success"></i>
+                                            <h6>相似度計算</h6>
+                                            <p class="small mb-0">余弦相似度+標籤匹配</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 text-center mb-3">
+                                        <div class="p-3 rounded border">
+                                            <i class="bi bi-sort-down fs-3 mb-2 text-warning"></i>
+                                            <h6>結果排序</h6>
+                                            <p class="small mb-0">選出最相關商品</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="calculation-info">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <th style="width: 40%">使用模型：</th>
+                                            <td>BERT (bert-base-chinese)</td>
+                                        </tr>
+                                        <tr>
+                                            <th>計算設備：</th>
+                                            <td>{{ device }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <th>候選商品數：</th>
+                                            <td>{{ data|length }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>即時計算耗時：</th>
+                                            <td><span id="computation-time" class="badge bg-dark realtime-highlight">計算中...</span> 秒</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="alert alert-success">
+                                <strong><i class="bi bi-info-circle"></i> 即時計算狀態：</strong> 
+                                <span class="text-success">這些推薦結果是<u>即時計算產生</u>的，而非預先計算的靜態數據</span>
+                            </div>
+                        </div>
+                        
+                        <div class="progress mt-3" style="height: 25px;">
+                            <div id="calculation-progress" class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                                 role="progressbar" style="width: 0%;" 
+                                 aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                正在計算中...
+                            </div>
+                        </div>
+                        
+                        <div class="text-muted mt-2">
+                            <small>本系統使用 BERT 語言模型即時分析商品特徵並計算相似度，沒有使用預先計算的相似度數據。</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <h3 class="mb-3">為您推薦</h3>
+                <p class="text-muted">根據BERT語義分析和標籤相似度計算的即時推薦商品：</p>
+                
+                <!-- 推薦列表容器 -->
+                <div id="recommendationsContainer">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3">正在為您計算推薦商品，請稍候...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card mb-4 border-success">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-lightning-fill"></i> 即時計算特性</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>本推薦引擎採用即時計算方式：</p>
+                        <ul>
+                            <li>每次請求都會進行實時計算</li>
+                            <li>不使用預先計算的結果</li>
+                            <li>根據當前商品即時分析相似度</li>
+                            <li>實時反映商品數據和屬性變化</li>
+                        </ul>
+                        <div class="alert alert-warning">
+                            <i class="bi bi-clock"></i> 即時計算雖然耗時較長，但能提供更精確的推薦結果
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">相似度分析</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>此推薦系統使用了以下技術：</p>
+                        <ul>
+                            <li>BERT中文預訓練模型進行語義理解</li>
+                            <li>結合屬性和標籤的加權相似度計算</li>
+                            <li>標籤之間的Jaccard相似度</li>
+                        </ul>
+                        <hr>
+                        <h6>相似度指標說明：</h6>
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="similarity-indicator me-2" style="background-color: #28a745; width: 20px; height: 20px;"></div>
+                            <span>0.8-1.0: 極高相似度</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="similarity-indicator me-2" style="background-color: #17a2b8; width: 20px; height: 20px;"></div>
+                            <span>0.6-0.8: 高相似度</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="similarity-indicator me-2" style="background-color: #ffc107; width: 20px; height: 20px;"></div>
+                            <span>0.4-0.6: 中等相似度</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="similarity-indicator me-2" style="background-color: #fd7e14; width: 20px; height: 20px;"></div>
+                            <span>0.0-0.4: 低相似度</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化變數
+            const productId = "{{ product_id }}";
+            const progressBar = document.getElementById('calculation-progress');
+            const loadingProgressBar = document.getElementById('loadingProgress');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const loadingMessage = document.getElementById('loadingMessage');
+            const badge = document.getElementById('calculation-badge');
+            const computationTime = document.getElementById('computation-time');
+            const recommendationsContainer = document.getElementById('recommendationsContainer');
+            
+            // 顯示載入遮罩
+            loadingOverlay.style.display = 'flex';
+            
+            // 模擬進度更新
+            let progress = 0;
+            let simulatedDuration = 15; // 假設最長15秒
+            let interval = 100; // 每100ms更新一次
+            let steps = simulatedDuration * 1000 / interval;
+            let increment = 100 / steps;
+            
+            // 更新進度條函數
+            function updateProgress() {
+                if (progress < 95) { // 保留最後5%給實際完成時使用
+                    progress += increment;
+                    let currentProgress = Math.min(Math.round(progress), 95);
+                    
+                    // 更新兩處進度條
+                    progressBar.style.width = currentProgress + '%';
+                    progressBar.setAttribute('aria-valuenow', currentProgress);
+                    progressBar.textContent = currentProgress + '%';
+                    
+                    loadingProgressBar.style.width = currentProgress + '%';
+                    loadingProgressBar.setAttribute('aria-valuenow', currentProgress);
+                    loadingProgressBar.textContent = currentProgress + '%';
+                    
+                    // 更新載入信息
+                    if (currentProgress < 30) {
+                        loadingMessage.textContent = "正在進行文本標記化...";
+                    } else if (currentProgress < 60) {
+                        loadingMessage.textContent = "正在計算BERT向量特徵...";
+                    } else if (currentProgress < 85) {
+                        loadingMessage.textContent = "正在計算所有商品相似度...";
+                    } else {
+                        loadingMessage.textContent = "正在排序並選出最相關商品...";
+                    }
+                }
+            }
+            
+            // 開始進度模擬
+            let progressInterval = setInterval(updateProgress, interval);
+            
+            // 開始實際的API請求
+            fetch(`/api/realtime-recommendations/${productId}?count=5`)
+                .then(response => response.json())
+                .then(data => {
+                    // 清除進度模擬
+                    clearInterval(progressInterval);
+                    
+                    // 完成進度條
+                    progressBar.style.width = '100%';
+                    progressBar.setAttribute('aria-valuenow', 100);
+                    progressBar.textContent = '即時計算完成！';
+                    
+                    loadingProgressBar.style.width = '100%';
+                    loadingProgressBar.setAttribute('aria-valuenow', 100);
+                    loadingProgressBar.textContent = '100%';
+                    
+                    // 更新計算時間和狀態
+                    computationTime.textContent = data.computation_time.toFixed(4);
+                    badge.textContent = '已完成';
+                    badge.classList.remove('bg-warning', 'text-dark');
+                    badge.classList.add('bg-success', 'text-white');
+                    
+                    // 隱藏載入遮罩
+                    loadingOverlay.style.display = 'none';
+                    
+                    // 構建推薦列表HTML
+                    let recommendationsHTML = '';
+                    
+                    data.recommendations.forEach(rec => {
+                        let similarityClass = '';
+                        const similarity = rec.similarity;
+                        
+                        if (similarity > 0.8) similarityClass = 'similarity-high';
+                        else if (similarity > 0.6) similarityClass = 'similarity-medium-high';
+                        else if (similarity > 0.4) similarityClass = 'similarity-medium';
+                        else similarityClass = 'similarity-low';
+                        
+                        let tagsHTML = '';
+                        rec.tags.forEach(tag => {
+                            if (tag && tag.trim()) {
+                                tagsHTML += `<span class="badge bg-secondary tag-badge">${tag}</span>`;
+                            }
+                        });
+                        
+                        recommendationsHTML += `
+                        <div class="card mb-3 recommendation-card">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-auto">
+                                        <div class="similarity-indicator ${similarityClass}">
+    
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <h5 class="card-title mb-1">${rec.name}</h5>
+                                        <h6 class="card-subtitle mb-2 text-muted">${rec.category}</h6>
+                                        <div>
+                                            ${tagsHTML}
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <a href="/product/${rec.index}" class="btn btn-primary">查看詳情</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        `;
+                    });
+                    
+                    // 更新推薦列表
+                    recommendationsContainer.innerHTML = recommendationsHTML;
+                })
+                .catch(error => {
+                    clearInterval(progressInterval);
+                    console.error('獲取推薦時出錯:', error);
+                    recommendationsContainer.innerHTML = `
+                        <div class="alert alert-danger">
+                            <strong>計算出錯:</strong> 無法獲取商品推薦，請稍後再試。
+                        </div>
+                    `;
+                    
+                    progressBar.classList.remove('bg-success', 'progress-bar-animated');
+                    progressBar.classList.add('bg-danger');
+                    progressBar.textContent = '計算錯誤';
+                    
+                    badge.textContent = '失敗';
+                    badge.classList.remove('bg-warning', 'text-dark');
+                    badge.classList.add('bg-danger', 'text-white');
+                    
+                    // 隱藏載入遮罩
+                    loadingOverlay.style.display = 'none';
+                });
+        });
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
