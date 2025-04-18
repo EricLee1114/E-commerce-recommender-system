@@ -284,7 +284,7 @@ final_similarity = 0.9 * base_similarity * attribute_factor + 0.1 * tag_similari
 
 ### 演示
 
-[觀看demo youtube](https://www.youtube.com/watch?v=OYCc_2yO7uk)
+[觀看 demo youtube](https://www.youtube.com/watch?v=OYCc_2yO7uk)
 
 
 
