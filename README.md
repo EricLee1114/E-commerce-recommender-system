@@ -187,11 +187,11 @@ docker-compose up -d
 
 #### 訓練參數
 
-![訓練參數](/images/framework.png)
+![訓練參數](/images/Hyperparameter.png)
 
 #### 訓練環境
 
-由於模型訓練需要大量計算資源，我們提供了Google Colab環境的完整訓練筆記本：
+由於模型訓練需要大量計算資源，我提供了Google Colab環境的完整訓練筆記本：
 
 [![Open In Colab](https://colab.research.google.com/drive/1pb8UmzFWEdQnNUQHbqdSh69jcDUFkjVg#scrollTo=x_8_8ljKEeN1))
 
