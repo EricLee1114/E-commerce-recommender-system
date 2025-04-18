@@ -175,6 +175,34 @@ docker-compose up -d
 最終相似度 = 0.9 * 向量相似度 * 類別權重 + 0.1 * 標籤Jaccard相似度
 ```
 
+### BERT模型訓練詳解
+
+本系統使用的BERT模型需要針對商品推薦任務進行特殊調整。完整的訓練流程如下：
+
+#### 模型架構
+
+- 基礎模型：BERT-base-chinese 
+- 微調層：自定義的相似度學習層
+- 訓練目標：最大化相關商品之間的向量相似度
+
+#### 訓練參數
+
+![訓練參數](/images/framework.png)
+
+#### 訓練環境
+
+由於模型訓練需要大量計算資源，我們提供了Google Colab環境的完整訓練筆記本：
+
+[![Open In Colab](https://colab.research.google.com/drive/1pb8UmzFWEdQnNUQHbqdSh69jcDUFkjVg#scrollTo=x_8_8ljKEeN1))
+
+
+#### 評估與優化
+
+筆記本中還包含模型評估工具，可以測試以下指標：
+- 推薦準確率與召回率
+- 向量空間的視覺化分析
+- 各類商品的推薦效果對比
+
 ### API 參考
 
 系統提供以下 API 端點：
