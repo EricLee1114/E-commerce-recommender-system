@@ -246,11 +246,11 @@ final_similarity = 0.9 * base_similarity * attribute_factor + 0.1 * tag_similari
 
 ### 系統截圖
 
-![推薦系統主界面](https://github.com/EricLee1114/bert-recommender/images/index.png)
+![推薦系統主界面](/images/index.png)
 
 *商品詳情頁面與即時推薦結果*
 
-![計算過程展示](https://github.com/EricLee1114/bert-recommender/images/calculating.png)
+![計算過程展示](/images/calculating.png)
 
 *即時計算過程的視覺化展示*
 
