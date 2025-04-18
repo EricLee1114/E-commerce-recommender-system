@@ -203,6 +203,13 @@ docker-compose up -d
 - 向量空間的視覺化分析
 - 各類商品的推薦效果對比
 
+## 模型獲取
+
+由於模型文件過大，請從以下鏈接下載：
+[下載 best_model1000.pt 模型]([您的雲端存儲連結](https://drive.google.com/file/d/1Jgu9oujF-mBzrxbTgW-Zuuj17PO0gH0Z/view?usp=drive_link))
+
+下載後，將文件放置於專案根目錄或`models/`目錄中。
+
 ### API 參考
 
 系統提供以下 API 端點：
